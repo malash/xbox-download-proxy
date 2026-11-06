@@ -1,0 +1,12 @@
+{
+  "name": "xbox-download-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.mjs",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "http-mitm-proxy": "^1.1.0"
+  }
+}
