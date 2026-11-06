@@ -32,11 +32,14 @@ proxy.onRequest(async (ctx, callback) => {
   }
 
   const isDlassets = DLASSETS_HOSTS.has(hostname);
+  const backend = isDlassets ? DLASSETS_BACKEND : ASSETS_BACKEND;
   const requestOptions = ctx.proxyToServerRequestOptions;
-  requestOptions.host = isDlassets ? DLASSETS_BACKEND : ASSETS_BACKEND;
+  requestOptions.host = backend;
   requestOptions.headers.host = isDlassets
     ? "dlassets.xboxlive.cn"
     : "assets1.xboxlive.cn";
+
+  console.log(`${hostname}${ctx.clientToProxyRequest.url} -> ${backend}`);
 
   callback();
 });
