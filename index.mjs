@@ -26,8 +26,7 @@ proxy.onRequest(async (ctx, callback) => {
     .toLowerCase();
 
   if (!ALLOWED_HOSTS.has(hostname)) {
-    ctx.proxyToClientResponse.writeHead(403);
-    ctx.proxyToClientResponse.end();
+    callback();
     return;
   }
 
