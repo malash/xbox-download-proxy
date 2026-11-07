@@ -3,15 +3,9 @@
 [English](./README.md) | [中文](./README.zh-CN.md)
 
 > **⚠️ Vibe coded — use with caution.**
-> This project was built entirely through AI-assisted vibe coding and has not been audited for production use. The implementation may contain subtle bugs, insecure defaults, or edge cases that were never considered. Review carefully before deploying in any critical context.
+> Built through AI-assisted vibe coding and not audited for production use. Review before deploying in any critical context.
 
-Rewrites Xbox `.com` download hosts to `.cn` CDN endpoints. An HTTP forward proxy that only forwards those domains, so downloads are served from a closer edge node.
-
-Xbox download traffic on the `.com` domains is routed to overseas edge nodes. From mainland China that path is slow — a download can crawl along at a fraction of a megabyte per second, and large game packages take hours.
-
-The same content is also published on the `.cn` domains, which are served by a domestic CDN. Requests to those domains land on a nearby node and download at tens of megabytes per second.
-
-This proxy bridges the two. It sits between the client and the CDN. When a request comes in for something like `assets1.xboxlive.com`, the proxy connects to `assets1.xboxlive.cn` instead and sends `assets1.xboxlive.cn` as the Host header. The CDN therefore sees a request for a domain it is configured to serve domestically, and hands it to a nearby edge node. The client keeps requesting the original `.com` address and does not need to change anything.
+Rewrites Xbox `.com` download hosts to the domestic `.cn` CDN, so downloads are served from a nearby edge node instead of an overseas one.
 
 ## Usage
 
@@ -27,7 +21,14 @@ docker build -t xbox-download-proxy .
 docker run -p 8080:8080 xbox-download-proxy
 ```
 
-Listens on `0.0.0.0:8080` by default.
+Use it as an HTTP proxy:
+
+```bash
+curl -x http://127.0.0.1:8080 \
+  http://assets1.xboxlive.com/3/xxxx/Game.xvc
+```
+
+The request reaches the CDN with `assets1.xboxlive.cn` as its Host.
 
 ## Configuration
 
@@ -37,12 +38,19 @@ Listens on `0.0.0.0:8080` by default.
 | `DLASSETS_BACKEND` | `dlassets.xboxlive.cn` | Backend for `dlassets*` domains |
 | `LISTEN_PORT` | `8080` | Listen port |
 | `LISTEN_ADDRESS` | `0.0.0.0` | Listen address |
+| `PROXY_USERNAME` | _(empty)_ | Basic auth username |
+| `PROXY_PASSWORD` | _(empty)_ | Basic auth password |
+
+Set both to require HTTP Basic auth (`407` otherwise); leave both empty to disable it. Setting only one refuses to start.
 
 ```bash
 LISTEN_PORT=9000 \
 ASSETS_BACKEND=assets1.xboxlive.cn.a.bdydns.com \
+PROXY_USERNAME=alice PROXY_PASSWORD=secret \
 ./xbox-download-proxy
 ```
+
+Credentials are sent in plaintext — use a trusted network or put TLS in front of the proxy.
 
 ## Supported domains
 
@@ -54,17 +62,6 @@ dlassets.xboxlive.com dlassets2.xboxlive.com
 ```
 
 Any other domain is forwarded unchanged.
-
-## Usage
-
-Use it as an HTTP proxy:
-
-```bash
-curl -x http://127.0.0.1:8080 \
-  http://assets1.xboxlive.com/3/xxxx/Game.xvc
-```
-
-The request reaches the CDN with `assets1.xboxlive.cn` as its Host.
 
 ## Notes
 

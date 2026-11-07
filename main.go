@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/subtle"
+	"encoding/base64"
 	"log"
 	"net"
 	"net/http"
@@ -67,6 +69,18 @@ func routeFor(host string) (route, bool) {
 	return route{backend: assetsBackend, host: "assets1.xboxlive.cn"}, true
 }
 
+func requireProxyAuth(next http.Handler, expected string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if expected != "" && subtle.ConstantTimeCompare([]byte(r.Header.Get("Proxy-Authorization")), []byte(expected)) != 1 {
+			w.Header().Set("Proxy-Authenticate", `Basic realm="xbox-download-proxy"`)
+			http.Error(w, "proxy authentication required", http.StatusProxyAuthRequired)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	proxy := goproxy.NewProxyHttpServer()
 	proxy.Tr = &http.Transport{
@@ -112,7 +126,18 @@ func main() {
 		return request, nil
 	})
 
+	username, password := os.Getenv("PROXY_USERNAME"), os.Getenv("PROXY_PASSWORD")
+
+	if (username == "") != (password == "") {
+		log.Fatal("PROXY_USERNAME and PROXY_PASSWORD must be set together")
+	}
+
+	var expectedAuth string
+	if username != "" {
+		expectedAuth = "Basic " + base64.StdEncoding.EncodeToString([]byte(username+":"+password))
+	}
+
 	address := listenAddress + ":" + listenPort
 	log.Printf("listening %s", address)
-	log.Fatal(http.ListenAndServe(address, proxy))
+	log.Fatal(http.ListenAndServe(address, requireProxyAuth(proxy, expectedAuth)))
 }
