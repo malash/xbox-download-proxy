@@ -60,6 +60,12 @@ proxy.onRequest(async (ctx, callback) => {
   console.log(`${hostname}${ctx.clientToProxyRequest.url} -> ${backend}`);
 
   callback();
+
+  process.nextTick(() => {
+    ctx.clientToProxyRequest.socket.once("close", () => {
+      ctx.proxyToServerRequest?.destroy();
+    });
+  });
 });
 
 proxy.listen({ port: LISTEN_PORT, host: LISTEN_ADDRESS });
