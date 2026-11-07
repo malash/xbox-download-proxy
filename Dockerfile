@@ -1,12 +1,18 @@
-FROM node:24-alpine
+FROM golang:1.24-alpine AS builder
 
-WORKDIR /app
+WORKDIR /usr/src/app
 
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+COPY go.mod go.sum ./
+RUN go mod download
 
 COPY . .
+RUN go build -v -o /usr/local/bin/xbox-download-proxy
 
+FROM alpine:3
+
+WORKDIR /app
 EXPOSE 8080
 
-CMD ["npm", "start"]
+COPY --from=builder /usr/local/bin/xbox-download-proxy /app/xbox-download-proxy
+
+CMD ["/app/xbox-download-proxy"]

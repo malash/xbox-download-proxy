@@ -16,8 +16,15 @@ Xbox 在 `.com` 域名上的下载流量会被调度到境外的边缘节点。�
 ## 使用
 
 ```bash
-npm install
-npm start
+go build -o xbox-download-proxy
+./xbox-download-proxy
+```
+
+或者用 Docker：
+
+```bash
+docker build -t xbox-download-proxy .
+docker run -p 8080:8080 xbox-download-proxy
 ```
 
 默认监听 `0.0.0.0:8080`。
@@ -34,7 +41,7 @@ npm start
 ```bash
 LISTEN_PORT=9000 \
 ASSETS_BACKEND=assets1.xboxlive.cn.a.bdydns.com \
-node index.mjs
+./xbox-download-proxy
 ```
 
 ## 支持的域名
@@ -46,7 +53,7 @@ xvcf1.xboxlive.com    xvcf2.xboxlive.com
 dlassets.xboxlive.com dlassets2.xboxlive.com
 ```
 
-其余域名一律返回 `403`。
+其余域名原样转发。
 
 ## 用法
 
@@ -61,7 +68,7 @@ curl -x http://127.0.0.1:8080 \
 
 ## 说明
 
-- 仅支持明文 HTTP，不支持 `CONNECT` / HTTPS。
+- 仅支持明文 HTTP。HTTPS（`CONNECT` 到 443 端口）会原样转发，不改写 Host。
 - 后端域名由系统 DNS 解析。
 
 ## 许可证

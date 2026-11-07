@@ -16,8 +16,15 @@ This proxy bridges the two. It sits between the client and the CDN. When a reque
 ## Usage
 
 ```bash
-npm install
-npm start
+go build -o xbox-download-proxy
+./xbox-download-proxy
+```
+
+Or with Docker:
+
+```bash
+docker build -t xbox-download-proxy .
+docker run -p 8080:8080 xbox-download-proxy
 ```
 
 Listens on `0.0.0.0:8080` by default.
@@ -34,7 +41,7 @@ Listens on `0.0.0.0:8080` by default.
 ```bash
 LISTEN_PORT=9000 \
 ASSETS_BACKEND=assets1.xboxlive.cn.a.bdydns.com \
-node index.mjs
+./xbox-download-proxy
 ```
 
 ## Supported domains
@@ -46,7 +53,7 @@ xvcf1.xboxlive.com    xvcf2.xboxlive.com
 dlassets.xboxlive.com dlassets2.xboxlive.com
 ```
 
-Any other domain gets `403`.
+Any other domain is forwarded unchanged.
 
 ## Usage
 
@@ -61,7 +68,7 @@ The request reaches the CDN with `assets1.xboxlive.cn` as its Host.
 
 ## Notes
 
-- Plaintext HTTP only. `CONNECT` / HTTPS is not supported.
+- Plaintext HTTP only. HTTPS (`CONNECT` to port 443) is forwarded untouched, without Host rewriting.
 - Backend hostnames are resolved through the system DNS.
 
 ## License
