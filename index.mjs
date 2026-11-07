@@ -1,3 +1,4 @@
+import net from "node:net";
 import { Proxy } from "http-mitm-proxy";
 
 const ASSETS_BACKEND = process.env.ASSETS_BACKEND || "assets1.xboxlive.cn";
@@ -19,6 +20,24 @@ const ALLOWED_HOSTS = new Set([
 const DLASSETS_HOSTS = new Set(["dlassets.xboxlive.com", "dlassets2.xboxlive.com"]);
 
 const proxy = new Proxy();
+
+proxy.onConnect((req, socket, head, callback) => {
+  const hostname = req.url.split(":")[0].toLowerCase();
+  if (ALLOWED_HOSTS.has(hostname)) {
+    return callback();
+  }
+
+  const [host, port] = req.url.split(":");
+  const upstream = net.connect(Number(port) || 80, host, () => {
+    socket.write("HTTP/1.1 200 Connection established\r\n\r\n");
+    if (head.length) upstream.write(head);
+    upstream.pipe(socket);
+    socket.pipe(upstream);
+  });
+
+  upstream.on("error", () => socket.destroy());
+  socket.on("error", () => upstream.destroy());
+});
 
 proxy.onRequest(async (ctx, callback) => {
   const hostname = ctx.clientToProxyRequest.headers.host
