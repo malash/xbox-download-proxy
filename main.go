@@ -2,9 +2,11 @@ package main
 
 import (
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/elazarl/goproxy"
 )
@@ -37,6 +39,15 @@ type route struct {
 	host    string
 }
 
+var forwardedHeaders = []string{
+	"X-Forwarded-For",
+	"X-Forwarded-Host",
+	"X-Forwarded-Port",
+	"X-Forwarded-Proto",
+	"X-Forwarded-Server",
+	"X-Real-Ip",
+}
+
 func getenv(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
@@ -58,6 +69,18 @@ func routeFor(host string) (route, bool) {
 
 func main() {
 	proxy := goproxy.NewProxyHttpServer()
+	proxy.Tr = &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   10 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		MaxIdleConns:          256,
+		MaxIdleConnsPerHost:   64,
+		IdleConnTimeout:       90 * time.Second,
+		DisableCompression:    true,
+		ForceAttemptHTTP2:     false,
+		ExpectContinueTimeout: time.Second,
+	}
 
 	proxy.OnRequest().HandleConnectFunc(func(host string, ctx *goproxy.ProxyCtx) (*goproxy.ConnectAction, string) {
 		hostname := strings.TrimSuffix(strings.ToLower(host), ":80")
@@ -78,6 +101,10 @@ func main() {
 		}
 
 		log.Printf("%s%s -> %s", request.Host, request.URL.RequestURI(), matched.backend)
+
+		for _, header := range forwardedHeaders {
+			request.Header.Del(header)
+		}
 
 		request.Host = matched.host
 		request.Header.Set("Host", matched.host)
